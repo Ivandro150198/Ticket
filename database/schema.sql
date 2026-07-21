@@ -1,0 +1,139 @@
+CREATE DATABASE IF NOT EXISTS eventticket_gb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE eventticket_gb;
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+DROP TABLE IF EXISTS tickets;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS ticket_types;
+DROP TABLE IF EXISTS events;
+DROP TABLE IF EXISTS password_resets;
+DROP TABLE IF EXISTS newsletter_subscribers;
+DROP TABLE IF EXISTS partners;
+DROP TABLE IF EXISTS contact_messages;
+DROP TABLE IF EXISTS faqs;
+DROP TABLE IF EXISTS users;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+CREATE TABLE users (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    email VARCHAR(190) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    phone VARCHAR(40) NULL,
+    role ENUM('cliente', 'produtor', 'admin') NOT NULL DEFAULT 'cliente',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE events (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    producer_id INT UNSIGNED NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    description TEXT NOT NULL,
+    venue VARCHAR(255) NOT NULL,
+    city VARCHAR(120) NOT NULL,
+    country CHAR(2) NOT NULL DEFAULT 'PT',
+    currency CHAR(3) NOT NULL DEFAULT 'EUR',
+    age_rating VARCHAR(20) NOT NULL DEFAULT 'Todos',
+    capacity INT UNSIGNED NULL,
+    starts_at DATETIME NOT NULL,
+    image VARCHAR(255) NULL,
+    promoter_name VARCHAR(190) NULL,
+    promoter_nif VARCHAR(20) NULL,
+    status ENUM('draft', 'pending', 'published', 'cancelled') NOT NULL DEFAULT 'draft',
+    featured TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_events_producer FOREIGN KEY (producer_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE ticket_types (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    event_id INT UNSIGNED NOT NULL,
+    name VARCHAR(120) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    promo_price DECIMAL(10,2) NULL,
+    stock INT UNSIGNED NOT NULL DEFAULT 0,
+    vat_rate DECIMAL(5,2) NOT NULL DEFAULT 23.00,
+    CONSTRAINT fk_ticket_types_event FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE orders (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT UNSIGNED NULL,
+    buyer_name VARCHAR(120) NOT NULL,
+    buyer_email VARCHAR(190) NOT NULL,
+    buyer_phone VARCHAR(40) NULL,
+    total DECIMAL(10,2) NOT NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'EUR',
+    country CHAR(2) NOT NULL DEFAULT 'PT',
+    status ENUM('pending', 'paid', 'cancelled') NOT NULL DEFAULT 'pending',
+    payment_method VARCHAR(60) NOT NULL DEFAULT 'simulado',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_orders_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE order_items (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    order_id INT UNSIGNED NOT NULL,
+    ticket_type_id INT UNSIGNED NOT NULL,
+    qty INT UNSIGNED NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    CONSTRAINT fk_order_items_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_items_type FOREIGN KEY (ticket_type_id) REFERENCES ticket_types(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE tickets (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    order_item_id INT UNSIGNED NOT NULL,
+    code VARCHAR(40) NOT NULL UNIQUE,
+    qr_payload VARCHAR(255) NOT NULL,
+    pdf_path VARCHAR(255) NULL,
+    used_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_tickets_item FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE newsletter_subscribers (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(190) NOT NULL UNIQUE,
+    accepted TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE partners (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    logo VARCHAR(255) NULL,
+    website VARCHAR(255) NULL,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    sort_order INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;
+
+CREATE TABLE contact_messages (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(120) NOT NULL,
+    email VARCHAR(190) NOT NULL,
+    subject VARCHAR(190) NOT NULL,
+    message TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE password_resets (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(190) NOT NULL,
+    token VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_reset_email (email)
+) ENGINE=InnoDB;
+
+CREATE TABLE faqs (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    question VARCHAR(255) NOT NULL,
+    answer TEXT NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0
+) ENGINE=InnoDB;

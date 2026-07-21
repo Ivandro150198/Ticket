@@ -1,0 +1,5 @@
+RewriteEngine On
+
+# Redirecionar a raiz do projeto para a app em /Ticket/public
+RewriteRule ^$ /Ticket/public/ [R=302,L]
+RewriteRule ^(?!public/)(.*)$ /Ticket/public/$1 [R=302,L]
